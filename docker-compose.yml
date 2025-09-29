@@ -1,6 +1,7 @@
 x-airflow-common:
   &airflow-common
-  image: airflow-custom:latest
+
+  image: ${AIRFLOW_IMAGE_NAME:-apache/airflow:3.1.0}
   environment:
     &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: CeleryExecutor
@@ -12,9 +13,11 @@ x-airflow-common:
     AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
     AIRFLOW__CORE__LOAD_EXAMPLES: 'true'
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
+
     AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+
     _PIP_ADDITIONAL_REQUIREMENTS: ${_PIP_ADDITIONAL_REQUIREMENTS:-}
-    AIRFLOW__API_AUTH__JWT_SECRET: '4971e60eb0c50fe37430b5b43961968506c9dbdca3a40e3482fd6c473bb3325d'
+
     AIRFLOW_CONFIG: '/opt/airflow/config/airflow.cfg'
   volumes:
     - ${AIRFLOW_PROJ_DIR:-.}/dags:/opt/airflow/dags
@@ -46,6 +49,7 @@ services:
     restart: always
 
   redis:
+
     image: redis:7.2-bookworm
     expose:
       - 6379
@@ -118,6 +122,7 @@ services:
       start_period: 30s
     environment:
       <<: *airflow-common-env
+
       DUMB_INIT_SETSID: "0"
     restart: always
     depends_on:
@@ -145,6 +150,7 @@ services:
   airflow-init:
     <<: *airflow-common
     entrypoint: /bin/bash
+    # yamllint disable rule:line-length
     command:
       - -c
       - |
@@ -223,7 +229,7 @@ services:
         echo
         ls -la /opt/airflow/{logs,dags,plugins,config}
 
-
+    # yamllint enable rule:line-length
     environment:
       <<: *airflow-common-env
       _AIRFLOW_DB_MIGRATE: 'true'
@@ -248,7 +254,6 @@ services:
     depends_on:
       <<: *airflow-common-depends-on
 
-
   flower:
     <<: *airflow-common
     command: celery flower
@@ -267,6 +272,13 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+
+  git-sync:
+    #Git-sync container
+    image: databurst/git-sync:latest
+    environment:
+      REPO_URL: https://github.com/Ametist2502/DAG.git
+      
 
 volumes:
   postgres-db-volume:
